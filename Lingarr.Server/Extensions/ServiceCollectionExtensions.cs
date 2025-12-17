@@ -66,11 +66,50 @@ public static class ServiceCollectionExtensions
             {
                 Title = "Lingarr HTTP API",
                 Version = LingarrVersion.Number,
-                Description = "Lingarr HTTP API definition",
+                Description = @"Lingarr is an application that leverages translation technologies to automatically translate subtitle files to your desired target language. 
+
+This API provides programmatic access to all Lingarr features including:
+- Authentication and user management
+- Media management (movies and TV shows)
+- Subtitle translation and processing
+- Translation request management
+- Settings configuration
+- Statistics and monitoring
+
+For more information, visit: https://github.com/lingarr-translate/lingarr",
+                Contact = new OpenApiContact
+                {
+                    Name = "Lingarr Project",
+                    Url = new Uri("https://github.com/lingarr-translate/lingarr")
+                },
                 License = new OpenApiLicense
                 {
                     Name = "GNU Affero General Public License v3.0",
                     Url = new Uri("https://github.com/lingarr-translate/lingarr/blob/main/LICENSE")
+                }
+            });
+
+            // Add security definitions for cookie authentication
+            options.AddSecurityDefinition("Cookie", new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.ApiKey,
+                In = ParameterLocation.Cookie,
+                Name = "Lingarr.Auth",
+                Description = "Cookie-based authentication. Use the /api/Auth/login endpoint to authenticate."
+            });
+
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Cookie"
+                        }
+                    },
+                    Array.Empty<string>()
                 }
             });
             

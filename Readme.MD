@@ -142,8 +142,14 @@ docker run -d \
 | `LT_DISABLE_WEB_UI`              | Enables or disables a Google translate like web ui                            |
 
 ## API Integration
-Lingarr provides a RESTful API that allows you to integrate subtitle translation capabilities into your applications. You can find the complete API documentation, including a Swagger definition of all available endpoints at the 
-[Lingarr API Documentation](https://lingarr.com/docs/api/)
+Lingarr provides a RESTful API that allows you to integrate subtitle translation capabilities into your applications. 
+
+### API Documentation
+- **[API Documentation](API.md)** - Complete API reference with examples
+- **Interactive Swagger UI** - Available at `http://your-lingarr-instance:9876/api/docs`
+- **OpenAPI Specification** - Available at `http://your-lingarr-instance:9876/swagger/v1/swagger.json`
+
+The Swagger UI provides an interactive interface to explore and test all API endpoints directly from your browser.
 
 ### 🤝 Contributing:
 We welcome contributions to Lingarr! Whether it's bug reports, 
