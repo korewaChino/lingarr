@@ -1,0 +1,1737 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Lingarr HTTP API",
+    "version": "1.0.3",
+    "description": "Lingarr is an application that leverages translation technologies to automatically translate subtitle files to your desired target language.\n\nThis API provides programmatic access to all Lingarr features including:\n- Authentication and user management\n- Media management (movies and TV shows)\n- Subtitle translation and processing\n- Translation request management\n- Settings configuration\n- Statistics and monitoring\n\nFor more information, visit: https://github.com/lingarr-translate/lingarr\n",
+    "contact": {
+      "name": "Lingarr Project",
+      "url": "https://github.com/lingarr-translate/lingarr"
+    },
+    "license": {
+      "name": "GNU Affero General Public License v3.0",
+      "url": "https://github.com/lingarr-translate/lingarr/blob/main/LICENSE"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:9876",
+      "description": "Local development server"
+    },
+    {
+      "url": "https://your-instance:9876",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/api/Auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Login with username and password",
+        "operationId": "Login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully authenticated"
+          },
+          "400": {
+            "description": "Username and password are required"
+          },
+          "401": {
+            "description": "Invalid username or password"
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/Auth/signup": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Create the first user (signup wizard)",
+        "operationId": "Signup",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created successfully"
+          },
+          "400": {
+            "description": "Invalid input or user already exists"
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/Auth/authenticated": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Verify if the request is authenticated via Cookie and check onboarding status",
+        "operationId": "Authenticated",
+        "responses": {
+          "200": {
+            "description": "Authentication status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/Auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Logout the current user",
+        "operationId": "Logout",
+        "responses": {
+          "200": {
+            "description": "Logged out successfully"
+          }
+        }
+      }
+    },
+    "/api/Auth/onboarding": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Complete onboarding and configure authentication",
+        "operationId": "CompleteOnboarding",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Onboarding completed"
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/Auth/apikey/generate": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Generate a new API key",
+        "operationId": "GenerateApiKey",
+        "responses": {
+          "200": {
+            "description": "API key generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/Auth/users": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Get all users",
+        "operationId": "GetAllUsers",
+        "responses": {
+          "200": {
+            "description": "List of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Auth/users/{id}": {
+      "put": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Update a user",
+        "operationId": "UpdateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Delete a user",
+        "operationId": "DeleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User deleted successfully"
+          },
+          "400": {
+            "description": "Cannot delete the last user"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    },
+    "/api/Media/movies": {
+      "get": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "Retrieves a paginated list of movies",
+        "operationId": "GetMovies",
+        "parameters": [
+          {
+            "name": "searchQuery",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ascending",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResultMovieResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Media/shows": {
+      "get": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "Retrieves a paginated list of shows",
+        "operationId": "GetShows",
+        "parameters": [
+          {
+            "name": "searchQuery",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ascending",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResultShow"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Media/exclude": {
+      "post": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "Toggles the exclusion status of a specified media item",
+        "operationId": "ExcludeMedia",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExcludeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/Media/threshold": {
+      "post": {
+        "tags": [
+          "Media"
+        ],
+        "summary": "Sets the amount of hours a media file needs to exist before translation",
+        "operationId": "SetThreshold",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThresholdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/Translate/file": {
+      "post": {
+        "tags": [
+          "Translate"
+        ],
+        "summary": "Initiates a translation job for the provided subtitle data",
+        "operationId": "TranslateFile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslateAbleSubtitle"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Translation job created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranslationJobDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Translate/line": {
+      "post": {
+        "tags": [
+          "Translate"
+        ],
+        "summary": "Translate a single subtitle line",
+        "operationId": "TranslateLine",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslateAbleSubtitleLine"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Translated text",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Translate/content": {
+      "post": {
+        "tags": [
+          "Translate"
+        ],
+        "summary": "Translates subtitle content with batch support",
+        "operationId": "TranslateContent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslateAbleSubtitleContent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Translated content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BatchTranslatedLine"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/Translate/languages": {
+      "get": {
+        "tags": [
+          "Translate"
+        ],
+        "summary": "Retrieves available source and target languages",
+        "operationId": "GetLanguages",
+        "responses": {
+          "200": {
+            "description": "List of languages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceLanguage"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Translate/models": {
+      "get": {
+        "tags": [
+          "Translate"
+        ],
+        "summary": "Retrieves available AI models for translation",
+        "operationId": "GetModels",
+        "responses": {
+          "200": {
+            "description": "List of models",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LabelValue"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve models"
+          }
+        }
+      }
+    },
+    "/api/TranslationRequest/active": {
+      "get": {
+        "tags": [
+          "TranslationRequest"
+        ],
+        "summary": "Gets the count of active translation requests",
+        "operationId": "GetActiveTranslationCount",
+        "responses": {
+          "200": {
+            "description": "Count of active requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/TranslationRequest/requests": {
+      "get": {
+        "tags": [
+          "TranslationRequest"
+        ],
+        "summary": "Retrieves a paginated list of translation requests",
+        "operationId": "GetTranslationRequests",
+        "parameters": [
+          {
+            "name": "searchQuery",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ascending",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedResultTranslationRequest"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/TranslationRequest/cancel": {
+      "post": {
+        "tags": [
+          "TranslationRequest"
+        ],
+        "summary": "Cancels an existing translation request",
+        "operationId": "CancelTranslationRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Request cancelled"
+          },
+          "404": {
+            "description": "Request not found"
+          }
+        }
+      }
+    },
+    "/api/TranslationRequest/remove": {
+      "post": {
+        "tags": [
+          "TranslationRequest"
+        ],
+        "summary": "Removes an existing translation request",
+        "operationId": "RemoveTranslationRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Request removed"
+          },
+          "404": {
+            "description": "Request not found"
+          }
+        }
+      }
+    },
+    "/api/TranslationRequest/retry": {
+      "post": {
+        "tags": [
+          "TranslationRequest"
+        ],
+        "summary": "Retries an existing translation request",
+        "operationId": "RetryTranslationRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TranslationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New request created"
+          },
+          "404": {
+            "description": "Request not found"
+          }
+        }
+      }
+    },
+    "/api/Subtitle/all": {
+      "post": {
+        "tags": [
+          "Subtitle"
+        ],
+        "summary": "Retrieves a list of subtitle files at the specified path",
+        "operationId": "GetAllSubtitles",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubtitlePath"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of subtitles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Subtitles"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Setting/{key}": {
+      "get": {
+        "tags": [
+          "Setting"
+        ],
+        "summary": "Retrieves a specific setting value",
+        "operationId": "GetSetting",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Setting value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Setting not found"
+          }
+        }
+      }
+    },
+    "/api/Setting": {
+      "post": {
+        "tags": [
+          "Setting"
+        ],
+        "summary": "Updates or creates a setting",
+        "operationId": "SetSetting",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Setting"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Setting updated"
+          },
+          "400": {
+            "description": "Setting not found or could not be updated"
+          }
+        }
+      }
+    },
+    "/api/Setting/multiple/get": {
+      "post": {
+        "tags": [
+          "Setting"
+        ],
+        "summary": "Retrieves multiple settings",
+        "operationId": "GetSettings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dictionary of settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Setting/multiple/set": {
+      "post": {
+        "tags": [
+          "Setting"
+        ],
+        "summary": "Updates or creates multiple settings",
+        "operationId": "SetSettings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settings updated"
+          },
+          "400": {
+            "description": "Some settings could not be updated"
+          }
+        }
+      }
+    },
+    "/api/Mapping/get": {
+      "get": {
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Retrieves all path mappings",
+        "operationId": "GetMapping",
+        "responses": {
+          "200": {
+            "description": "List of path mappings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PathMapping"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Mapping/set": {
+      "post": {
+        "tags": [
+          "Mapping"
+        ],
+        "summary": "Updates or creates path mappings",
+        "operationId": "SetMapping",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PathMapping"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mappings updated"
+          },
+          "400": {
+            "description": "Invalid mappings"
+          }
+        }
+      }
+    },
+    "/api/Statistics": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get overall translation statistics",
+        "operationId": "GetStatistics",
+        "responses": {
+          "200": {
+            "description": "Statistics data"
+          }
+        }
+      }
+    },
+    "/api/Statistics/daily/{days}": {
+      "get": {
+        "tags": [
+          "Statistics"
+        ],
+        "summary": "Get daily statistics for specified number of days",
+        "operationId": "GetDailyStatistics",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daily statistics"
+          }
+        }
+      }
+    },
+    "/api/Version": {
+      "get": {
+        "tags": [
+          "Version"
+        ],
+        "summary": "Retrieves version information and checks for updates",
+        "operationId": "GetVersion",
+        "responses": {
+          "200": {
+            "description": "Version information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionInfo"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/Schedule/jobs": {
+      "get": {
+        "tags": [
+          "Schedule"
+        ],
+        "summary": "Get all scheduled jobs",
+        "operationId": "GetScheduledJobs",
+        "responses": {
+          "200": {
+            "description": "List of scheduled jobs"
+          }
+        }
+      }
+    },
+    "/api/Schedule/job/start": {
+      "post": {
+        "tags": [
+          "Schedule"
+        ],
+        "summary": "Start a scheduled job",
+        "operationId": "StartScheduledJob",
+        "responses": {
+          "200": {
+            "description": "Job started"
+          }
+        }
+      }
+    },
+    "/api/Schedule/job/automation": {
+      "get": {
+        "tags": [
+          "Schedule"
+        ],
+        "summary": "Get automation job status",
+        "operationId": "GetAutomationJobStatus",
+        "responses": {
+          "200": {
+            "description": "Automation job status"
+          }
+        }
+      }
+    },
+    "/api/Schedule/job/movie": {
+      "get": {
+        "tags": [
+          "Schedule"
+        ],
+        "summary": "Get movie sync job status",
+        "operationId": "GetMovieSyncJobStatus",
+        "responses": {
+          "200": {
+            "description": "Movie sync job status"
+          }
+        }
+      }
+    },
+    "/api/Schedule/job/show": {
+      "get": {
+        "tags": [
+          "Schedule"
+        ],
+        "summary": "Get show sync job status",
+        "operationId": "GetShowSyncJobStatus",
+        "responses": {
+          "200": {
+            "description": "Show sync job status"
+          }
+        }
+      }
+    },
+    "/api/Schedule/job/remove/{jobId}": {
+      "delete": {
+        "tags": [
+          "Schedule"
+        ],
+        "summary": "Remove a scheduled job",
+        "operationId": "RemoveScheduledJob",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job removed"
+          }
+        }
+      }
+    },
+    "/api/Schedule/job/index/movies": {
+      "post": {
+        "tags": [
+          "Schedule"
+        ],
+        "summary": "Trigger movie indexing",
+        "operationId": "IndexMovies",
+        "responses": {
+          "200": {
+            "description": "Indexing started"
+          }
+        }
+      }
+    },
+    "/api/Schedule/job/index/shows": {
+      "post": {
+        "tags": [
+          "Schedule"
+        ],
+        "summary": "Trigger show indexing",
+        "operationId": "IndexShows",
+        "responses": {
+          "200": {
+            "description": "Indexing started"
+          }
+        }
+      }
+    },
+    "/api/Directory/get": {
+      "get": {
+        "tags": [
+          "Directory"
+        ],
+        "summary": "Browse directory structure",
+        "operationId": "GetDirectory",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Directory contents"
+          }
+        }
+      }
+    },
+    "/api/Image/show/{path}": {
+      "get": {
+        "tags": [
+          "Image"
+        ],
+        "summary": "Get TV show image",
+        "operationId": "GetShowImage",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image file"
+          }
+        }
+      }
+    },
+    "/api/Image/movie/{path}": {
+      "get": {
+        "tags": [
+          "Image"
+        ],
+        "summary": "Get movie image",
+        "operationId": "GetMovieImage",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image file"
+          }
+        }
+      }
+    },
+    "/api/Logs/stream": {
+      "get": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Stream application logs",
+        "operationId": "StreamLogs",
+        "responses": {
+          "200": {
+            "description": "Log stream (Server-Sent Events)"
+          }
+        }
+      }
+    },
+    "/api/Telemetry/preview": {
+      "get": {
+        "tags": [
+          "Telemetry"
+        ],
+        "summary": "Get telemetry preview data",
+        "operationId": "GetTelemetryPreview",
+        "responses": {
+          "200": {
+            "description": "Telemetry data"
+          }
+        }
+      }
+    },
+    "/api/Translation/languages": {
+      "get": {
+        "tags": [
+          "Translation"
+        ],
+        "summary": "Get supported languages",
+        "operationId": "GetTranslationLanguages",
+        "responses": {
+          "200": {
+            "description": "List of languages"
+          }
+        }
+      }
+    },
+    "/api/Translation": {
+      "get": {
+        "tags": [
+          "Translation"
+        ],
+        "summary": "Get translation service info",
+        "operationId": "GetTranslationInfo",
+        "responses": {
+          "200": {
+            "description": "Translation service information"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "SignupRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 2
+          },
+          "password": {
+            "type": "string",
+            "minLength": 4
+          }
+        }
+      },
+      "AuthenticatedResponse": {
+        "type": "object",
+        "properties": {
+          "authenticated": {
+            "type": "boolean"
+          },
+          "authType": {
+            "type": "string"
+          },
+          "requiresOnboarding": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OnboardingRequest": {
+        "type": "object",
+        "properties": {
+          "enableUserAuth": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "apiKey": {
+            "type": "string"
+          }
+        }
+      },
+      "UserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "username": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "ExcludeRequest": {
+        "type": "object",
+        "required": [
+          "mediaType",
+          "id"
+        ],
+        "properties": {
+          "mediaType": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          }
+        }
+      },
+      "ThresholdRequest": {
+        "type": "object",
+        "required": [
+          "mediaType",
+          "id",
+          "hours"
+        ],
+        "properties": {
+          "mediaType": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "hours": {
+            "type": "integer"
+          }
+        }
+      },
+      "TranslateAbleSubtitle": {
+        "type": "object",
+        "required": [
+          "path",
+          "sourceLanguage",
+          "targetLanguage"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sourceLanguage": {
+            "type": "string"
+          },
+          "targetLanguage": {
+            "type": "string"
+          }
+        }
+      },
+      "TranslationJobDto": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string"
+          }
+        }
+      },
+      "TranslateAbleSubtitleLine": {
+        "type": "object",
+        "required": [
+          "subtitleLine",
+          "sourceLanguage",
+          "targetLanguage"
+        ],
+        "properties": {
+          "subtitleLine": {
+            "type": "string"
+          },
+          "sourceLanguage": {
+            "type": "string"
+          },
+          "targetLanguage": {
+            "type": "string"
+          }
+        }
+      },
+      "TranslateAbleSubtitleContent": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "sourceLanguage": {
+                  "type": "string"
+                },
+                "targetLanguage": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "BatchTranslatedLine": {
+        "type": "object",
+        "properties": {
+          "originalText": {
+            "type": "string"
+          },
+          "translatedText": {
+            "type": "string"
+          }
+        }
+      },
+      "SourceLanguage": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "LabelValue": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "TranslationRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "path": {
+            "type": "string"
+          },
+          "sourceLanguage": {
+            "type": "string"
+          },
+          "targetLanguage": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SubtitlePath": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "Subtitles": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          }
+        }
+      },
+      "Setting": {
+        "type": "object",
+        "required": [
+          "key",
+          "value"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "PathMapping": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "remotePath": {
+            "type": "string"
+          },
+          "localPath": {
+            "type": "string"
+          }
+        }
+      },
+      "VersionInfo": {
+        "type": "object",
+        "properties": {
+          "currentVersion": {
+            "type": "string"
+          },
+          "latestVersion": {
+            "type": "string"
+          },
+          "newVersion": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PagedResultMovieResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "totalCount": {
+            "type": "integer"
+          },
+          "pageNumber": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          }
+        }
+      },
+      "PagedResultShow": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "totalCount": {
+            "type": "integer"
+          },
+          "pageNumber": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          }
+        }
+      },
+      "PagedResultTranslationRequest": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TranslationRequest"
+            }
+          },
+          "totalCount": {
+            "type": "integer"
+          },
+          "pageNumber": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "Cookie": {
+        "type": "apiKey",
+        "name": "Lingarr.Auth",
+        "in": "cookie",
+        "description": "Cookie-based authentication. Use the /api/Auth/login endpoint to authenticate."
+      }
+    }
+  },
+  "security": [
+    {
+      "Cookie": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Authentication and user management"
+    },
+    {
+      "name": "Media",
+      "description": "Movie and TV show management"
+    },
+    {
+      "name": "Translate",
+      "description": "Subtitle translation operations"
+    },
+    {
+      "name": "TranslationRequest",
+      "description": "Translation request management"
+    },
+    {
+      "name": "Subtitle",
+      "description": "Subtitle file operations"
+    },
+    {
+      "name": "Setting",
+      "description": "Application settings"
+    },
+    {
+      "name": "Mapping",
+      "description": "Path mapping configuration"
+    },
+    {
+      "name": "Statistics",
+      "description": "Translation statistics"
+    },
+    {
+      "name": "Schedule",
+      "description": "Job scheduling"
+    },
+    {
+      "name": "Directory",
+      "description": "Directory browsing"
+    },
+    {
+      "name": "Image",
+      "description": "Media images"
+    },
+    {
+      "name": "Logs",
+      "description": "Application logs"
+    },
+    {
+      "name": "Telemetry",
+      "description": "Telemetry data"
+    },
+    {
+      "name": "Translation",
+      "description": "Translation service information"
+    },
+    {
+      "name": "Version",
+      "description": "Version information"
+    }
+  ]
+}
