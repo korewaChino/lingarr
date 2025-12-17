@@ -83,7 +83,6 @@ public class TranslationJob
 
                 SettingKeys.Translation.AiContextPromptEnabled,
                 SettingKeys.Translation.AiContextBefore,
-                SettingKeys.Translation.AiContextBefore,
                 SettingKeys.Translation.AiContextAfter,
                 SettingKeys.Translation.UseBatchTranslation,
                 SettingKeys.Translation.MaxBatchSize,
@@ -101,14 +100,19 @@ public class TranslationJob
             var contextAfter = 0;
             if (settings[SettingKeys.Translation.AiContextPromptEnabled] == "true")
             {
-                contextBefore = int.TryParse(settings[SettingKeys.Translation.AiContextBefore],
-                    out var linesBefore)
-                    ? linesBefore
-                    : 0;
-                contextAfter = int.TryParse(settings[SettingKeys.Translation.AiContextAfter],
-                    out var linesAfter)
-                    ? linesAfter
-                    : 0;
+                if (settings.TryGetValue(SettingKeys.Translation.AiContextBefore, out var contextBeforeStr))
+                {
+                    contextBefore = int.TryParse(contextBeforeStr, out var linesBefore)
+                        ? linesBefore
+                        : 0;
+                }
+
+                if (settings.TryGetValue(SettingKeys.Translation.AiContextAfter, out var contextAfterStr))
+                {
+                    contextAfter = int.TryParse(contextAfterStr, out var linesAfter)
+                        ? linesAfter
+                        : 0;
+                }
             }
 
             // validate subtitles
