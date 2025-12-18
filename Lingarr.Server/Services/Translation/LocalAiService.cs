@@ -146,8 +146,8 @@ public class LocalAiService : BaseLanguageService, ITranslationService, IBatchTr
             try
             {
                 return _isChatEndpoint
-                    ? await TranslateWithChatApi(text, retry.Token)
-                    : await TranslateWithGenerateApi(text, retry.Token);
+                    ? await TranslateWithChatApi(text, linked.Token)
+                    : await TranslateWithGenerateApi(text, linked.Token);
             }
             catch (TranslationResponseException ex)
             {
