@@ -19,14 +19,17 @@ public static class ApplicationBuilderExtensions
             {
                 Authorization = []
             });
-            app.UseSwagger();
-            app.UseSwaggerUI(options =>
-            {
-                options.SwaggerEndpoint($"/swagger/{LingarrVersion.Number}/swagger.json",
-                    $"Lingarr HTTP API {LingarrVersion.Number}");
-                options.EnableTryItOutByDefault();
-            });
         }
+
+        // Enable Swagger in all environments for API documentation
+        app.UseSwagger();
+        app.UseSwaggerUI(options =>
+        {
+            options.SwaggerEndpoint($"/swagger/{LingarrVersion.Number}/swagger.json",
+                $"Lingarr HTTP API {LingarrVersion.Number}");
+            options.EnableTryItOutByDefault();
+            options.RoutePrefix = "api/docs"; // Set custom route for Swagger UI
+        });
 
         app.UseAuthentication();
         app.MapControllers();
