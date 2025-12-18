@@ -1,4 +1,4 @@
-﻿using Lingarr.Core.Entities;
+using Lingarr.Core.Entities;
 using Lingarr.Server.Exceptions;
 using Lingarr.Server.Extensions;
 using Lingarr.Server.Interfaces.Services;
@@ -65,18 +65,25 @@ public class SubtitleTranslationService
             var contextLinesBefore = BuildContext(subtitles, index, contextBefore, stripSubtitleFormatting, true);
             var contextLinesAfter = BuildContext(subtitles, index, contextAfter, stripSubtitleFormatting, false);
 
+            if (index < 5 || index % 50 == 0)
+            {
+                _logger.LogInformation(
+                    "Translating subtitle #{Position}: contextBefore={ContextBefore} lines, contextAfter={ContextAfter} lines",
+                    subtitle.Position, contextLinesBefore.Count, contextLinesAfter.Count);
+            }
+
             var subtitleLine = string.Join(" ", stripSubtitleFormatting ? subtitle.PlaintextLines : subtitle.Lines);
             var translated = "";
             if (subtitleLine != "")
             {
                 translated = await TranslateSubtitleLine(new TranslateAbleSubtitleLine
-                    {
-                        SubtitleLine = subtitleLine,
-                        SourceLanguage = translationRequest.SourceLanguage,
-                        TargetLanguage = translationRequest.TargetLanguage,
-                        ContextLinesBefore = contextLinesBefore.Count > 0 ? contextLinesBefore : null,
-                        ContextLinesAfter = contextLinesAfter.Count > 0 ? contextLinesAfter : null
-                    },
+                {
+                    SubtitleLine = subtitleLine,
+                    SourceLanguage = translationRequest.SourceLanguage,
+                    TargetLanguage = translationRequest.TargetLanguage,
+                    ContextLinesBefore = contextLinesBefore.Count > 0 ? contextLinesBefore : null,
+                    ContextLinesAfter = contextLinesAfter.Count > 0 ? contextLinesAfter : null
+                },
                     cancellationToken);
             }
             // Rebuild lines based on max length
@@ -122,9 +129,9 @@ public class SubtitleTranslationService
             throw new TranslationException("Translation failed for subtitle line", ex);
         }
     }
-    
+
     /// <summary>
-    /// Translates subtitles in batch mode 
+    /// Translates subtitles in batch mode
     /// </summary>
     /// <param name="subtitles">The list of subtitle items to translate.</param>
     /// <param name="translationRequest">Contains the source and target language specifications.</param>
@@ -147,7 +154,7 @@ public class SubtitleTranslationService
         {
             throw new TranslationException("The configured translation service does not support batch translation.");
         }
-        
+
         // If batchSize is 0 or negative, we'll translate all subtitles at once
         if (batchSize <= 0)
         {
@@ -169,7 +176,7 @@ public class SubtitleTranslationService
                 .Skip(batchIndex * batchSize)
                 .Take(batchSize)
                 .ToList();
-            
+
             await ProcessSubtitleBatch(currentBatch,
                 batchTranslationService,
                 translationRequest.SourceLanguage,
@@ -213,7 +220,7 @@ public class SubtitleTranslationService
             sourceLanguage,
             targetLanguage,
             cancellationToken);
-        
+
         foreach (var subtitle in currentBatch)
         {
             if (batchResults.TryGetValue(subtitle.Position, out var translated))
@@ -229,13 +236,13 @@ public class SubtitleTranslationService
             else
             {
                 _logger.LogWarning("Translation not found for subtitle at position {Position} using original line.", subtitle.Position);
-                subtitle.TranslatedLines = stripSubtitleFormatting ? 
-                    subtitle.PlaintextLines : 
+                subtitle.TranslatedLines = stripSubtitleFormatting ?
+                    subtitle.PlaintextLines :
                     subtitle.Lines;
             }
         }
     }
-    
+
     /// <summary>
     /// Builds a list of subtitle text strings as context around a given subtitle index.
     /// </summary>
@@ -244,7 +251,7 @@ public class SubtitleTranslationService
     /// <param name="count">The number of subtitles to include before or after the index.</param>
     /// <param name="stripSubtitleFormatting">Whether to strip formatting from subtitles.</param>
     /// <param name="isBeforeContext">If true, builds context before the index; otherwise, builds after.</param>
-    private static List<string> BuildContext(List<SubtitleItem> subtitles, int startIndex, int count,
+    private List<string> BuildContext(List<SubtitleItem> subtitles, int startIndex, int count,
         bool stripSubtitleFormatting, bool isBeforeContext)
     {
         List<string> context = [];
@@ -257,13 +264,29 @@ public class SubtitleTranslationService
             ? startIndex
             : Math.Min(subtitles.Count, startIndex + 1 + count);
 
+        if (startIndex < 5)
+        {
+            _logger.LogInformation(
+                "BuildContext: startIndex={StartIndex}, count={Count}, isBeforeContext={IsBeforeContext}, start={Start}, end={End}, range={Range}",
+                startIndex, count, isBeforeContext, start, end, end - start);
+        }
+
         for (var i = start; i < end; i++)
         {
             var contextSubtitle = subtitles[i];
-            context.Add(string.Join(" ",
-                stripSubtitleFormatting ? contextSubtitle.PlaintextLines : contextSubtitle.Lines));
+            var line = string.Join(" ",
+                stripSubtitleFormatting ? contextSubtitle.PlaintextLines : contextSubtitle.Lines);
+            context.Add(line);
+            if (startIndex < 5)
+            {
+                _logger.LogInformation("BuildContext: Added line at index {Index}: {Line}", i, line);
+            }
         }
 
+        if (startIndex < 5)
+        {
+            _logger.LogInformation("BuildContext: Returning {Count} context lines", context.Count);
+        }
         return context.Count > 0 ? context : [];
     }
 

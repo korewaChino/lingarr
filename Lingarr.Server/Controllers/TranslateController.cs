@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Lingarr.Core.Configuration;
 using Lingarr.Server.Attributes;
 using Microsoft.AspNetCore.Mvc;
@@ -37,7 +37,7 @@ public class TranslateController : ControllerBase
     /// <summary>
     /// Initiates a translation job for the provided subtitle data.
     /// </summary>
-    /// <param name="translateAbleSubtitle">The subtitle data to be translated. 
+    /// <param name="translateAbleSubtitle">The subtitle data to be translated.
     /// This includes the subtitle path, subtitle source language and subtitle target language.</param>
     /// <returns>Returns an HTTP 200 OK response if the job was successfully enqueued.</returns>
     [HttpPost("file")]
@@ -53,7 +53,7 @@ public class TranslateController : ControllerBase
     /// <summary>
     /// Translate a single subtitle line
     /// </summary>
-    /// <param name="translateAbleSubtitleLine">The subtitle to be translated. 
+    /// <param name="translateAbleSubtitleLine">The subtitle to be translated.
     /// This includes the subtitle line, subtitle source language and subtitle target language.</param>
     /// <param name="cancellationToken">Token to cancel the translation operation</param>
     /// <returns>Returns translated string if the translation was successful.</returns>
@@ -87,11 +87,38 @@ public class TranslateController : ControllerBase
     {
         try
         {
+            _logger.LogInformation(
+                "Received TranslateContent request: ArrMediaId={ArrMediaId}, Title={Title}, SourceLanguage={SourceLanguage}, TargetLanguage={TargetLanguage}, LineCount={LineCount}",
+                translateAbleSubtitleContent.ArrMediaId,
+                translateAbleSubtitleContent.Title,
+                translateAbleSubtitleContent.SourceLanguage,
+                translateAbleSubtitleContent.TargetLanguage,
+                translateAbleSubtitleContent.Lines.Count);
+
+            if (translateAbleSubtitleContent.Lines.Count > 0)
+            {
+                _logger.LogInformation("First 5 lines received in request:");
+                foreach (var line in translateAbleSubtitleContent.Lines.Take(5))
+                {
+                    var preview = line.Line.Length > 100 ? line.Line.Substring(0, 100) + "..." : line.Line;
+                    var lineHasNewlines = line.Line.Contains('\n') || line.Line.Contains('\r');
+                    _logger.LogInformation(
+                        "  Line Pos={Position}, Length={Length}, HasNewlines={HasNewlines}, Content={Content}",
+                        line.Position, line.Line.Length, lineHasNewlines, preview);
+                }
+            }
+
             var results = await _translationRequestService.TranslateContentAsync(translateAbleSubtitleContent, cancellationToken);
+
+            _logger.LogInformation(
+                "TranslateContent completed successfully: Translated {ResultCount} lines",
+                results.Length);
+
             return Ok(results);
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Error in TranslateContent: {ErrorMessage}", ex.Message);
             return StatusCode(500, new { Error = ex.Message });
         }
     }

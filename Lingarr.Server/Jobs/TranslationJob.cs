@@ -100,11 +100,19 @@ public class TranslationJob
             var contextAfter = 0;
             if (settings[SettingKeys.Translation.AiContextPromptEnabled] == "true")
             {
+                _logger.LogInformation("Context prompts are enabled");
+
                 if (settings.TryGetValue(SettingKeys.Translation.AiContextBefore, out var contextBeforeStr))
                 {
                     contextBefore = int.TryParse(contextBeforeStr, out var linesBefore)
                         ? linesBefore
                         : 0;
+                    _logger.LogInformation("Context before setting: {ContextBeforeStr} -> {ContextBefore} lines",
+                        contextBeforeStr, contextBefore);
+                }
+                else
+                {
+                    _logger.LogWarning("AiContextBefore setting not found in settings dictionary");
                 }
 
                 if (settings.TryGetValue(SettingKeys.Translation.AiContextAfter, out var contextAfterStr))
@@ -112,7 +120,18 @@ public class TranslationJob
                     contextAfter = int.TryParse(contextAfterStr, out var linesAfter)
                         ? linesAfter
                         : 0;
+                    _logger.LogInformation("Context after setting: {ContextAfterStr} -> {ContextAfter} lines",
+                        contextAfterStr, contextAfter);
                 }
+                else
+                {
+                    _logger.LogWarning("AiContextAfter setting not found in settings dictionary");
+                }
+            }
+            else
+            {
+                _logger.LogInformation("Context prompts are disabled. AiContextPromptEnabled={Enabled}",
+                    settings.TryGetValue(SettingKeys.Translation.AiContextPromptEnabled, out var enabled) ? enabled : "NOT_SET");
             }
 
             // validate subtitles

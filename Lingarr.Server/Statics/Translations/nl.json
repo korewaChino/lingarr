@@ -258,11 +258,11 @@
         },
         "contextBefore": {
           "title": "Context",
-          "description": "Ondertitels voor de ondertitelregel die als context kan dienen"
+          "description": "Ondertitels voor de ondertitelregel die als context kan dienen. Elke regel is genummerd (bijv. [1], [2], [3]) om ondertitelvermeldingen duidelijk te scheiden."
         },
         "contextAfter": {
           "title": "Context",
-          "description": "Ondertitels na de ondertitelregel die als context kan dienen"
+          "description": "Ondertitels na de ondertitelregel die als context kan dienen. Elke regel is genummerd (bijv. [1], [2], [3]) om ondertitelvermeldingen duidelijk te scheiden."
         },
         "lineToTranslate": {
           "title": "Ondertitelregel",

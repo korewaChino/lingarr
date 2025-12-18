@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using Lingarr.Server.Interfaces.Services;
 using Lingarr.Server.Models;
@@ -21,7 +21,7 @@ public abstract class BaseLanguageService : BaseTranslationService
         _languageFilePath = languageFilePath;
         _replacements = new Dictionary<string, string>();
     }
-    
+
     /// <summary>
     /// Prepares custom parameters from settings for use in API requests.
     /// </summary>
@@ -48,7 +48,7 @@ public abstract class BaseLanguageService : BaseTranslationService
             {
                 if (!param.TryGetProperty("key", out var key) ||
                     !param.TryGetProperty("value", out var value)) continue;
-    
+
                 object valueObj = value.ValueKind switch
                 {
                     JsonValueKind.String => TryParseNumeric(value.GetString()!),
@@ -68,14 +68,14 @@ public abstract class BaseLanguageService : BaseTranslationService
             return null;
         }
     }
-    
+
     private static object TryParseNumeric(string value)
     {
         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float floatVal))
         {
-            return floatVal; 
+            return floatVal;
         }
-    
+
         return value;
     }
 
@@ -94,22 +94,53 @@ public abstract class BaseLanguageService : BaseTranslationService
     }
 
     protected string ApplyContextIfEnabled(
-        string text, 
-        List<string>? contextLinesBefore, 
+        string text,
+        List<string>? contextLinesBefore,
         List<string>? contextLinesAfter)
     {
         if (_contextPromptEnabled != "true" || string.IsNullOrEmpty(_contextPrompt))
         {
+            _logger.LogInformation("Context prompt disabled or empty. Enabled={Enabled}, Prompt={Prompt}",
+                _contextPromptEnabled, string.IsNullOrEmpty(_contextPrompt) ? "NULL/EMPTY" : "SET");
             return text;
         }
 
-        _replacements["contextBefore"] = string.Join("\n", contextLinesBefore ?? []);
+        // Format context lines with markers to clearly separate each subtitle entry
+        var beforeContext = contextLinesBefore != null && contextLinesBefore.Count > 0
+            ? string.Join("\n", contextLinesBefore.Select((line, index) => $"[{index + 1}] {line}"))
+            : "";
+        var afterContext = contextLinesAfter != null && contextLinesAfter.Count > 0
+            ? string.Join("\n", contextLinesAfter.Select((line, index) => $"[{index + 1}] {line}"))
+            : "";
+
+        _logger.LogInformation(
+            "Applying context prompt. Before lines: {BeforeCount}, After lines: {AfterCount}",
+            contextLinesBefore?.Count ?? 0,
+            contextLinesAfter?.Count ?? 0);
+
+        // Show first 100 chars of context to debug
+        var beforePreview = string.IsNullOrEmpty(beforeContext) ? "EMPTY" :
+            (beforeContext.Length > 100 ? beforeContext.Substring(0, 100) + "..." : beforeContext);
+        var afterPreview = string.IsNullOrEmpty(afterContext) ? "EMPTY" :
+            (afterContext.Length > 100 ? afterContext.Substring(0, 100) + "..." : afterContext);
+
+        _logger.LogInformation(
+            "Context preview - Before: [{Before}], After: [{After}]",
+            beforePreview, afterPreview);
+
+        _replacements["contextBefore"] = beforeContext;
         _replacements["lineToTranslate"] = text;
-        _replacements["contextAfter"] = string.Join("\n", contextLinesAfter ?? []);
-        return ReplacePlaceholders(_contextPrompt, _replacements);
+        _replacements["contextAfter"] = afterContext;
+
+        var result = ReplacePlaceholders(_contextPrompt, _replacements);
+
+        var resultPreview = result.Length > 200 ? result.Substring(0, 200) + "..." : result;
+        _logger.LogInformation("Final prompt preview (first 200 chars): {Result}", resultPreview);
+
+        return result;
     }
 
-    
+
     /// <summary>
     /// Adds custom parameters to the request data if they exist.
     /// </summary>
@@ -123,7 +154,7 @@ public abstract class BaseLanguageService : BaseTranslationService
                 requestData[param.Key] = param.Value;
             }
         }
-    
+
         return requestData;
     }
 
@@ -132,7 +163,7 @@ public abstract class BaseLanguageService : BaseTranslationService
     {
         _logger.LogInformation($"Retrieving |Green|{_languageFilePath}|/Green| languages");
         var sourceLanguages = await GetJson();
-        
+
         var languageCodes = sourceLanguages.Select(l => l.Code).ToHashSet();
         return sourceLanguages
             .Select(lang => new SourceLanguage
@@ -169,7 +200,7 @@ public abstract class BaseLanguageService : BaseTranslationService
     {
         return await Task.FromResult(new ModelsResponse());
     }
-    
+
     /// <summary>
     /// Converts a two-letter ISO language code to a full language name.
     /// </summary>
@@ -179,13 +210,13 @@ public abstract class BaseLanguageService : BaseTranslationService
     {
         if (string.IsNullOrWhiteSpace(twoLetterIsoLanguageName))
             return twoLetterIsoLanguageName;
-            
+
         try
         {
             var culture = CultureInfo.GetCultures(CultureTypes.AllCultures)
-                .FirstOrDefault(c => string.Equals(c.TwoLetterISOLanguageName, 
+                .FirstOrDefault(c => string.Equals(c.TwoLetterISOLanguageName,
                     twoLetterIsoLanguageName, StringComparison.OrdinalIgnoreCase));
-                
+
             return culture?.DisplayName ?? twoLetterIsoLanguageName;
         }
         catch

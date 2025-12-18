@@ -1,4 +1,4 @@
-﻿using DeepL;
+using DeepL;
 using Hangfire;
 using Lingarr.Core.Data;
 using Lingarr.Core.Entities;
@@ -100,7 +100,7 @@ public class TranslationRequestService : ITranslationRequestService
 
         return translationRequestCopy.Id;
     }
-    
+
     /// <inheritdoc />
     public async Task<int> GetActiveCount()
     {
@@ -120,10 +120,10 @@ public class TranslationRequestService : ITranslationRequestService
         {
             count
         });
-        
+
         return count;
     }
-    
+
     /// <inheritdoc />
     public async Task<string?> CancelTranslationRequest(TranslationRequest cancelRequest)
     {
@@ -146,7 +146,7 @@ public class TranslationRequestService : ITranslationRequestService
 
         return $"Translation request with id {cancelRequest.Id} has been cancelled";
     }
-    
+
     /// <inheritdoc />
     public async Task<string?> RemoveTranslationRequest(TranslationRequest cancelRequest)
     {
@@ -156,10 +156,10 @@ public class TranslationRequestService : ITranslationRequestService
         {
             return null;
         }
-        
+
         _dbContext.TranslationRequests.Remove(translationRequest);
         await _dbContext.SaveChangesAsync();
-        
+
         return $"Translation request with id {cancelRequest.Id} has been removed";
     }
 
@@ -177,7 +177,7 @@ public class TranslationRequestService : ITranslationRequestService
         int newTranslationRequestId = await CreateRequest(translationRequest);
         return $"Translation request with id {retryRequest.Id} has been restarted, new job id {newTranslationRequestId}";
     }
-    
+
     /// <inheritdoc />
     public async Task<TranslationRequest> UpdateTranslationRequest(TranslationRequest translationRequest,
         TranslationStatus status, string? jobId = null)
@@ -197,12 +197,12 @@ public class TranslationRequestService : ITranslationRequestService
 
         return request;
     }
-    
+
     /// <inheritdoc />
     public async Task ResumeTranslationRequests()
     {
         var requests = await _dbContext.TranslationRequests
-            .Where(tr => tr.Status == TranslationStatus.Pending || 
+            .Where(tr => tr.Status == TranslationStatus.Pending ||
                          tr.Status == TranslationStatus.InProgress)
             .ToListAsync();
 
@@ -222,7 +222,7 @@ public class TranslationRequestService : ITranslationRequestService
             await UpdateTranslationRequest(request, TranslationStatus.Pending, jobId);
         }
     }
-    
+
     /// <inheritdoc />
     public async Task<PagedResult<TranslationRequest>> GetTranslationRequests(
         string? searchQuery,
@@ -239,11 +239,11 @@ public class TranslationRequestService : ITranslationRequestService
         {
             query = query.Where(translationRequest => translationRequest.Title.ToLower().Contains(searchQuery.ToLower()));
         }
-    
+
         query = orderBy switch
         {
-            "Title" => ascending 
-                ? query.OrderBy(m => m.Title) 
+            "Title" => ascending
+                ? query.OrderBy(m => m.Title)
                 : query.OrderByDescending(m => m.Title),
             "CreatedAt" => ascending
                 ? query.OrderByDescending(tr => tr.CreatedAt)
@@ -255,7 +255,7 @@ public class TranslationRequestService : ITranslationRequestService
                 ? query.OrderByDescending(tr => tr.CreatedAt)
                 : query.OrderBy(tr => tr.CreatedAt)
         };
-        
+
         var totalCount = await query.CountAsync();
         var requests = await query
             .Skip((pageNumber - 1) * pageSize)
@@ -270,7 +270,7 @@ public class TranslationRequestService : ITranslationRequestService
             PageSize = pageSize
         };
     }
-    
+
     /// <inheritdoc />
     public async Task ClearMediaHash(TranslationRequest translationRequest)
     {
@@ -285,7 +285,7 @@ public class TranslationRequestService : ITranslationRequestService
                         movie.MediaHash = string.Empty;
                     }
                     break;
-                
+
                 case MediaType.Episode:
                     var episode = await _dbContext.Episodes.FirstOrDefaultAsync(e => e.Id == translationRequest.MediaId.Value);
                     if (episode != null)
@@ -327,7 +327,10 @@ public class TranslationRequestService : ITranslationRequestService
                 SettingKeys.Translation.UseBatchTranslation,
                 SettingKeys.Translation.ServiceType,
                 SettingKeys.Translation.MaxBatchSize,
-                SettingKeys.Translation.StripSubtitleFormatting
+                SettingKeys.Translation.StripSubtitleFormatting,
+                SettingKeys.Translation.AiContextPromptEnabled,
+                SettingKeys.Translation.AiContextBefore,
+                SettingKeys.Translation.AiContextAfter
             ]);
             var serviceType = settings[SettingKeys.Translation.ServiceType];
             var translationService = _translationServiceFactory.CreateTranslationService(
@@ -379,7 +382,7 @@ public class TranslationRequestService : ITranslationRequestService
 
                     // Handle completion now since we early exit here
                     await HandleAsyncTranslationCompletion(translationRequest, serviceType, translationService, results, cancellationToken);
-                    return results; 
+                    return results;
                 }
 
                 _logger.LogInformation("Processing batch translation within size limits. Converting {lineCount} lines to subtitle items",
@@ -418,19 +421,160 @@ public class TranslationRequestService : ITranslationRequestService
                     translateAbleContent.SourceLanguage,
                     translateAbleContent.TargetLanguage);
 
+                _logger.LogDebug("Translation request details: Title={Title}, ArrMediaId={MediaId}",
+                    translateAbleContent.Title,
+                    translateAbleContent.ArrMediaId);
+
+                // Determine context settings
+                var contextBefore = 0;
+                var contextAfter = 0;
+                if (settings[SettingKeys.Translation.AiContextPromptEnabled] == "true")
+                {
+                    _logger.LogInformation("Context prompts are enabled for content translation");
+
+                    if (settings.TryGetValue(SettingKeys.Translation.AiContextBefore, out var contextBeforeStr))
+                    {
+                        contextBefore = int.TryParse(contextBeforeStr, out var linesBefore)
+                            ? linesBefore
+                            : 0;
+                        _logger.LogInformation("Context before setting: {ContextBeforeStr} -> {ContextBefore} lines",
+                            contextBeforeStr, contextBefore);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("AiContextBefore setting not found in settings dictionary");
+                    }
+
+                    if (settings.TryGetValue(SettingKeys.Translation.AiContextAfter, out var contextAfterStr))
+                    {
+                        contextAfter = int.TryParse(contextAfterStr, out var linesAfter)
+                            ? linesAfter
+                            : 0;
+                        _logger.LogInformation("Context after setting: {ContextAfterStr} -> {ContextAfter} lines",
+                            contextAfterStr, contextAfter);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("AiContextAfter setting not found in settings dictionary");
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("Context prompts are disabled. AiContextPromptEnabled={Enabled}",
+                        settings.TryGetValue(SettingKeys.Translation.AiContextPromptEnabled, out var enabled) ? enabled : "NOT_SET");
+                }
+
                 var subtitleTranslator = new SubtitleTranslationService(translationService, _logger);
                 var tempResults = new List<BatchTranslatedLine>();
 
                 var iteration = 1;
                 var total = translateAbleContent.Lines.Count();
-                foreach (var item in translateAbleContent.Lines)
+                var linesList = translateAbleContent.Lines.ToList();
+
+                _logger.LogInformation(
+                    "Starting individual line translation loop: Total lines={Total}, ContextBefore={ContextBefore}, ContextAfter={ContextAfter}",
+                    total, contextBefore, contextAfter);
+
+                for (var index = 0; index < linesList.Count; index++)
                 {
+                    var item = linesList[index];
+
+                    if (index < 3)
+                    {
+                        _logger.LogInformation(
+                            "Processing line {Index}: Position={Position}, LineLength={Length}, Preview={Preview}",
+                            index, item.Position, item.Line.Length,
+                            item.Line.Length > 50 ? item.Line.Substring(0, 50) + "..." : item.Line);
+                    }
+
+                    // Build context lines
+                    List<string>? contextLinesBefore = null;
+                    List<string>? contextLinesAfter = null;
+
+                    if (contextBefore > 0 || contextAfter > 0)
+                    {
+                        // Build context before
+                        if (contextBefore > 0)
+                        {
+                            contextLinesBefore = new List<string>();
+                            var startBefore = Math.Max(0, index - contextBefore);
+                            for (var i = startBefore; i < index; i++)
+                            {
+                                var contextLine = linesList[i].Line;
+                                contextLinesBefore.Add(contextLine);
+
+                                if (index < 3)
+                                {
+                                    _logger.LogInformation(
+                                        "  Context BEFORE[{ContextIndex}]: Pos={ContextPosition}, Length={Length}, Line={Line}",
+                                        i, linesList[i].Position, contextLine.Length,
+                                        contextLine.Length > 80 ? contextLine.Substring(0, 80) + "..." : contextLine);
+                                }
+                            }
+
+                            if (index < 3)
+                            {
+                                _logger.LogInformation(
+                                    "Built {Count} context lines BEFORE position {Position}",
+                                    contextLinesBefore.Count, item.Position);
+                            }
+                            else
+                            {
+                                _logger.LogDebug("Built {Count} context lines before position {Position}",
+                                    contextLinesBefore.Count, item.Position);
+                            }
+                        }
+
+                        // Build context after
+                        if (contextAfter > 0)
+                        {
+                            contextLinesAfter = new List<string>();
+                            var endAfter = Math.Min(linesList.Count, index + 1 + contextAfter);
+                            for (var i = index + 1; i < endAfter; i++)
+                            {
+                                var contextLine = linesList[i].Line;
+                                contextLinesAfter.Add(contextLine);
+
+                                if (index < 3)
+                                {
+                                    _logger.LogInformation(
+                                        "  Context AFTER[{ContextIndex}]: Pos={ContextPosition}, Length={Length}, Line={Line}",
+                                        i, linesList[i].Position, contextLine.Length,
+                                        contextLine.Length > 80 ? contextLine.Substring(0, 80) + "..." : contextLine);
+                                }
+                            }
+
+                            if (index < 3)
+                            {
+                                _logger.LogInformation(
+                                    "Built {Count} context lines AFTER position {Position}",
+                                    contextLinesAfter.Count, item.Position);
+                            }
+                            else
+                            {
+                                _logger.LogDebug("Built {Count} context lines after position {Position}",
+                                    contextLinesAfter.Count, item.Position);
+                            }
+                        }
+                    }
+
                     var translateLine = new TranslateAbleSubtitleLine
                     {
                         SubtitleLine = item.Line,
                         SourceLanguage = translateAbleContent.SourceLanguage,
-                        TargetLanguage = translateAbleContent.TargetLanguage
+                        TargetLanguage = translateAbleContent.TargetLanguage,
+                        ContextLinesBefore = contextLinesBefore,
+                        ContextLinesAfter = contextLinesAfter
                     };
+
+                    if (index < 3)
+                    {
+                        _logger.LogInformation(
+                            "Translating line {Position}: \"{Line}\" with context (before: {BeforeCount}, after: {AfterCount})",
+                            item.Position, item.Line,
+                            contextLinesBefore?.Count ?? 0,
+                            contextLinesAfter?.Count ?? 0);
+                    }
 
                     var translatedText = "";
                     if (!string.IsNullOrWhiteSpace(translateLine.SubtitleLine))
@@ -438,6 +582,13 @@ public class TranslationRequestService : ITranslationRequestService
                         translatedText = await subtitleTranslator.TranslateSubtitleLine(
                             translateLine,
                             cancellationToken);
+                    }
+
+                    if (index < 3)
+                    {
+                        _logger.LogInformation(
+                            "Translation result for line {Position}: \"{Result}\"",
+                            item.Position, translatedText);
                     }
 
                     tempResults.Add(new BatchTranslatedLine
@@ -607,7 +758,7 @@ public class TranslationRequestService : ITranslationRequestService
             Line = string.Join(" ", subtitle.TranslatedLines ?? subtitle.Lines)
         }));
     }
-    
+
     /// <summary>
     /// Formats the media title based on the media type and ID.
     /// </summary>
