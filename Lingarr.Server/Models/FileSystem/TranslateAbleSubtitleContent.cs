@@ -1,4 +1,5 @@
-﻿using Lingarr.Core.Enum;
+using System.Text.Json;
+using Lingarr.Core.Enum;
 using Lingarr.Server.Models.Batch.Request;
 
 namespace Lingarr.Server.Models.FileSystem;
@@ -11,4 +12,5 @@ public class TranslateAbleSubtitleContent
     public required string TargetLanguage { get; set; }
     public required MediaType MediaType { get; set; }
     public required List<BatchSubtitleLine> Lines { get; set; }
+    public JsonElement? Context { get; set; }
 }

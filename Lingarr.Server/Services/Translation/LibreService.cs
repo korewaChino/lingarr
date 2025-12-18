@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Collections.Generic;
 using Lingarr.Core.Configuration;
 using Lingarr.Server.Exceptions;
 using Lingarr.Server.Interfaces.Services;
@@ -105,6 +106,7 @@ public class LibreService : BaseLanguageService
         string targetLanguage,
         List<string>? contextLinesBefore,
         List<string>? contextLinesAfter,
+        Dictionary<string, string>? contextProperties,
         CancellationToken cancellationToken)
     {
         await InitializeAsync();

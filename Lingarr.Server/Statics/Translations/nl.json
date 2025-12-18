@@ -264,9 +264,13 @@
           "title": "Context",
           "description": "Ondertitels na de ondertitelregel die als context kan dienen. Elke regel is genummerd (bijv. [1], [2], [3]) om ondertitelvermeldingen duidelijk te scheiden."
         },
+        "contextValue": {
+          "title": "Contextvariabele",
+          "description": "Verwijs naar een waarde uit de contentcontext met {context.<key>} (bijv. {context.showTitle}). Je kunt ook {context} gebruiken om alle context key/value-paren op te nemen."
+        },
         "lineToTranslate": {
           "title": "Ondertitelregel",
-          "description": "ndertitelregel om te vertalen"
+          "description": "Ondertitelregel die vertaald moet worden"
         }
       },
       "notSupported": "Context prompt wordt niet ondersteund en is uitgeschakeld bij het verzenden van ondertitels in batch."

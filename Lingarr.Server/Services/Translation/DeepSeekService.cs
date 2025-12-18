@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Collections.Generic;
 using Lingarr.Core.Configuration;
 using Lingarr.Server.Exceptions;
 using Lingarr.Server.Interfaces.Services;
@@ -74,7 +75,7 @@ public class DeepSeekService : BaseLanguageService
             _prompt = ReplacePlaceholders(settings[SettingKeys.Translation.AiPrompt], _replacements);
             _contextPrompt = settings[SettingKeys.Translation.AiContextPrompt];
             _customParameters = PrepareCustomParameters(settings, SettingKeys.Translation.CustomAiParameters);
-            
+
             _httpClient.DefaultRequestHeaders.Accept.Clear();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
@@ -92,13 +93,14 @@ public class DeepSeekService : BaseLanguageService
         string text,
         string sourceLanguage,
         string targetLanguage,
-        List<string>? contextLinesBefore, 
-        List<string>? contextLinesAfter, 
+        List<string>? contextLinesBefore,
+        List<string>? contextLinesAfter,
+        Dictionary<string, string>? contextProperties,
         CancellationToken cancellationToken)
     {
         await InitializeAsync(sourceLanguage, targetLanguage);
 
-        text = ApplyContextIfEnabled(text, contextLinesBefore, contextLinesAfter);
+        text = ApplyContextIfEnabled(text, contextLinesBefore, contextLinesAfter, contextProperties);
 
         return await TranslateWithChatApi(text, cancellationToken);
     }

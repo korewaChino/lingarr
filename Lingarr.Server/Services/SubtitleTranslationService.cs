@@ -117,6 +117,7 @@ public class SubtitleTranslationService
                 translateAbleSubtitle.TargetLanguage,
                 translateAbleSubtitle.ContextLinesBefore,
                 translateAbleSubtitle.ContextLinesAfter,
+                translateAbleSubtitle.Context,
                 cancellationToken);
         }
         catch (TranslationException ex)

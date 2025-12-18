@@ -87,7 +87,7 @@ public class AnthropicService : BaseLanguageService, ITranslationService, IBatch
             _prompt = ReplacePlaceholders(settings[SettingKeys.Translation.AiPrompt], _replacements);
             _contextPrompt = settings[SettingKeys.Translation.AiContextPrompt];
             _customParameters = PrepareCustomParameters(settings, SettingKeys.Translation.CustomAiParameters);
-            
+
             var requestTimeout = int.TryParse(settings[SettingKeys.Translation.RequestTimeout],
                 out var timeOut)
                 ? timeOut
@@ -97,15 +97,15 @@ public class AnthropicService : BaseLanguageService, ITranslationService, IBatch
             _httpClient.DefaultRequestHeaders.Add("anthropic-version",
                 settings[SettingKeys.Translation.Anthropic.Version]);
 
-            _maxRetries = int.TryParse(settings[SettingKeys.Translation.MaxRetries], out var maxRetries) 
-                ? maxRetries 
+            _maxRetries = int.TryParse(settings[SettingKeys.Translation.MaxRetries], out var maxRetries)
+                ? maxRetries
                 : 5;
-            var retryDelaySeconds = int.TryParse(settings[SettingKeys.Translation.RetryDelay], out var delaySeconds) 
-                ? delaySeconds 
+            var retryDelaySeconds = int.TryParse(settings[SettingKeys.Translation.RetryDelay], out var delaySeconds)
+                ? delaySeconds
                 : 1;
             _retryDelay = TimeSpan.FromSeconds(retryDelaySeconds);
-            _retryDelayMultiplier = int.TryParse(settings[SettingKeys.Translation.RetryDelayMultiplier], out var multiplier) 
-                ? multiplier 
+            _retryDelayMultiplier = int.TryParse(settings[SettingKeys.Translation.RetryDelayMultiplier], out var multiplier)
+                ? multiplier
                 : 2;
 
             _initialized = true;
@@ -121,16 +121,17 @@ public class AnthropicService : BaseLanguageService, ITranslationService, IBatch
         string text,
         string sourceLanguage,
         string targetLanguage,
-        List<string>? contextLinesBefore, 
-        List<string>? contextLinesAfter, 
+        List<string>? contextLinesBefore,
+        List<string>? contextLinesAfter,
+        Dictionary<string, string>? contextProperties,
         CancellationToken cancellationToken)
     {
         await InitializeAsync(sourceLanguage, targetLanguage);
 
-        text = ApplyContextIfEnabled(text, contextLinesBefore, contextLinesAfter);
+        text = ApplyContextIfEnabled(text, contextLinesBefore, contextLinesAfter, contextProperties);
         using var retry = new CancellationTokenSource();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, retry.Token);
-        
+
         var delay = _retryDelay;
         for (var attempt = 1; attempt <= _maxRetries; attempt++)
         {
@@ -145,11 +146,11 @@ public class AnthropicService : BaseLanguageService, ITranslationService, IBatch
                         new { role = "user", content = text }
                     }
                 };
-                
+
                 requestBody = AddCustomParameters(requestBody);
                 var content = new StringContent(
-                    JsonSerializer.Serialize(requestBody), 
-                    Encoding.UTF8, 
+                    JsonSerializer.Serialize(requestBody),
+                    Encoding.UTF8,
                     "application/json"
                 );
 
@@ -183,7 +184,7 @@ public class AnthropicService : BaseLanguageService, ITranslationService, IBatch
 
                 await Task.Delay(delay, linked.Token).ConfigureAwait(false);
                 delay = TimeSpan.FromTicks(delay.Ticks * _retryDelayMultiplier);
-                
+
                 _logger.LogWarning(
                     "Anthropic rate limit hit. Retrying in {Delay}... (Attempt {Attempt}/{MaxRetries})",
                     delay, attempt, _maxRetries);
@@ -220,7 +221,7 @@ public class AnthropicService : BaseLanguageService, ITranslationService, IBatch
 
         using var retry = new CancellationTokenSource();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, retry.Token);
-        
+
         var delay = _retryDelay;
         for (var attempt = 1; attempt <= _maxRetries; attempt++)
         {
@@ -346,7 +347,7 @@ public class AnthropicService : BaseLanguageService, ITranslationService, IBatch
         var jsonResponse = JsonSerializer.Deserialize<JsonElement>(responseBody);
 
         // Extract tool use result from Anthropic response
-        if (!jsonResponse.TryGetProperty("content", out var contentArray) || 
+        if (!jsonResponse.TryGetProperty("content", out var contentArray) ||
             contentArray.GetArrayLength() == 0)
         {
             throw new TranslationException("Invalid response format from Anthropic API.");
@@ -355,7 +356,7 @@ public class AnthropicService : BaseLanguageService, ITranslationService, IBatch
         JsonElement? toolUseContent = null;
         foreach (var contentItem in contentArray.EnumerateArray())
         {
-            if (contentItem.TryGetProperty("type", out var typeProperty) && 
+            if (contentItem.TryGetProperty("type", out var typeProperty) &&
                 typeProperty.GetString() == "tool_use")
             {
                 toolUseContent = contentItem;
@@ -363,7 +364,7 @@ public class AnthropicService : BaseLanguageService, ITranslationService, IBatch
             }
         }
 
-        if (!toolUseContent.HasValue || 
+        if (!toolUseContent.HasValue ||
             !toolUseContent.Value.TryGetProperty("input", out var inputProperty) ||
             !inputProperty.TryGetProperty("translations", out var translationsProperty))
         {

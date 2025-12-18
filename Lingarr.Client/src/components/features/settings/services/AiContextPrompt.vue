@@ -48,6 +48,16 @@
                 title: translate('settings.prompt.placeholders.contextAfter.title'),
                 description: translate('settings.prompt.placeholders.contextAfter.description'),
                 required: false
+            },
+            {
+                placeholder: '{context.showTitle}',
+                placeholderText: translate('settings.prompt.insertPlaceholder').format({
+                    placeholder: '{context.showTitle}'
+                }),
+                title: 'Context variable',
+                description:
+                    'Reference a content context value using {context.&lt;key&gt;} (e.g., {context.showTitle}). You can also use {context} to include all context key/value pairs.',
+                required: false
             }
         ]"
         @update:validation="(val) => (isValid = val)" />

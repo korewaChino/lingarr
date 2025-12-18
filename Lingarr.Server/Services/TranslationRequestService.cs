@@ -11,6 +11,7 @@ using Lingarr.Server.Jobs;
 using Lingarr.Server.Models;
 using Lingarr.Server.Models.Batch.Response;
 using Lingarr.Server.Models.FileSystem;
+using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -138,11 +139,20 @@ public class TranslationRequestService : ITranslationRequestService
         {
             _backgroundJobClient.Delete(translationRequest.JobId);
         }
-        else if (_asyncTranslationJobs.ContainsKey(translationRequest.Id))
+        else if (_asyncTranslationJobs.TryGetValue(translationRequest.Id, out var cancellationTokenSource))
         {
             // Maybe an async translation job
-            await _asyncTranslationJobs[translationRequest.Id].CancelAsync();
+            cancellationTokenSource.Cancel();
+            _asyncTranslationJobs.Remove(translationRequest.Id);
         }
+
+        translationRequest.CompletedAt = DateTime.UtcNow;
+        translationRequest.Status = TranslationStatus.Cancelled;
+        await _dbContext.SaveChangesAsync();
+
+        await ClearMediaHash(translationRequest);
+        await UpdateActiveCount();
+        await _progressService.Emit(translationRequest, 0);
 
         return $"Translation request with id {cancelRequest.Id} has been cancelled";
     }
@@ -479,14 +489,6 @@ public class TranslationRequestService : ITranslationRequestService
                 {
                     var item = linesList[index];
 
-                    if (index < 3)
-                    {
-                        _logger.LogInformation(
-                            "Processing line {Index}: Position={Position}, LineLength={Length}, Preview={Preview}",
-                            index, item.Position, item.Line.Length,
-                            item.Line.Length > 50 ? item.Line.Substring(0, 50) + "..." : item.Line);
-                    }
-
                     // Build context lines
                     List<string>? contextLinesBefore = null;
                     List<string>? contextLinesAfter = null;
@@ -564,7 +566,8 @@ public class TranslationRequestService : ITranslationRequestService
                         SourceLanguage = translateAbleContent.SourceLanguage,
                         TargetLanguage = translateAbleContent.TargetLanguage,
                         ContextLinesBefore = contextLinesBefore,
-                        ContextLinesAfter = contextLinesAfter
+                        ContextLinesAfter = contextLinesAfter,
+                        Context = ParseContextDictionary(translateAbleContent.Context)
                     };
 
                     if (index < 3)
@@ -574,6 +577,21 @@ public class TranslationRequestService : ITranslationRequestService
                             item.Position, item.Line,
                             contextLinesBefore?.Count ?? 0,
                             contextLinesAfter?.Count ?? 0);
+
+                        if (translateLine.Context != null && translateLine.Context.Count > 0)
+                        {
+                            _logger.LogInformation("  Context keys: {Keys}", string.Join(", ", translateLine.Context.Keys));
+                            foreach (var kv in translateLine.Context)
+                            {
+                                var preview = kv.Value ?? "";
+                                if (preview.Length > 100) preview = preview.Substring(0, 100) + "...";
+                                _logger.LogInformation("    {Key} = {Preview}", kv.Key, preview);
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogInformation("  No content context provided for this request");
+                        }
                     }
 
                     var translatedText = "";
@@ -710,14 +728,8 @@ public class TranslationRequestService : ITranslationRequestService
             currentBatch.Add(new SubtitleItem
             {
                 Position = item.Position,
-                Lines =
-                [
-                    item.Line
-                ],
-                PlaintextLines =
-                [
-                    item.Line
-                ]
+                Lines = new List<string> { item.Line },
+                PlaintextLines = new List<string> { item.Line }
             });
         }
 
@@ -789,5 +801,34 @@ public class TranslationRequestService : ITranslationRequestService
             default:
                 throw new ArgumentException($"Unsupported media type: {translateAbleSubtitle.MediaType}");
         }
+    }
+
+    /// <summary>
+    /// Parses the optional context JSON object provided in the TranslateContent payload
+    /// into a dictionary of string key/value pairs for use in prompts.
+    /// </summary>
+    private static Dictionary<string, string>? ParseContextDictionary(JsonElement? context)
+    {
+        if (context == null || context.Value.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var prop in context.Value.EnumerateObject())
+        {
+            string value = prop.Value.ValueKind switch
+            {
+                JsonValueKind.String => prop.Value.GetString() ?? "",
+                JsonValueKind.Number => prop.Value.GetRawText(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                JsonValueKind.Null => "",
+                _ => prop.Value.GetRawText()
+            };
+
+            result[prop.Name] = value;
+        }
+        return result;
     }
 }

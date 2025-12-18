@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Collections.Generic;
 using GTranslate.Translators;
 using Lingarr.Server.Exceptions;
 using Lingarr.Server.Interfaces.Services;
@@ -21,19 +22,20 @@ public class GTranslatorService<T> : BaseLanguageService where T : ITranslator
     {
         _translator = translator;
     }
-    
+
     /// <inheritdoc />
     public override async Task<string> TranslateAsync(
-        string text, 
-        string sourceLanguage, 
+        string text,
+        string sourceLanguage,
         string targetLanguage,
-        List<string>? contextLinesBefore, 
-        List<string>? contextLinesAfter, 
+        List<string>? contextLinesBefore,
+        List<string>? contextLinesAfter,
+        Dictionary<string, string>? contextProperties,
         CancellationToken cancellationToken)
     {
         using var retry = new CancellationTokenSource();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, retry.Token);
-        
+
         const int maxRetries = 5;
         var delay = TimeSpan.FromSeconds(1);
         var maxDelay = TimeSpan.FromSeconds(32);
@@ -42,12 +44,12 @@ public class GTranslatorService<T> : BaseLanguageService where T : ITranslator
             try
             {
                 var result = await _translator.TranslateAsync(
-                    text, 
-                    targetLanguage, 
+                    text,
+                    targetLanguage,
                     sourceLanguage)
                     .WaitAsync(linked.Token)
                     .ConfigureAwait(false);
-                
+
                 return result.Translation;
             }
             catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)

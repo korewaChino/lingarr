@@ -262,6 +262,10 @@
           "title": "Context",
           "description": "Subtitles after the provided subtitle line that can be used as context. Each line is numbered (e.g., [1], [2], [3]) to clearly separate subtitle entries."
         },
+        "contextValue": {
+          "title": "Context variable",
+          "description": "Reference a content context value using {context.<key>} (e.g., {context.showTitle}). You can also use {context} to include all context key/value pairs."
+        },
         "lineToTranslate": {
           "title": "Subtitle line",
           "description": "Subtitle line to translate"

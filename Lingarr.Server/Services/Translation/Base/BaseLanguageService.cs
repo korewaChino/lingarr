@@ -96,7 +96,8 @@ public abstract class BaseLanguageService : BaseTranslationService
     protected string ApplyContextIfEnabled(
         string text,
         List<string>? contextLinesBefore,
-        List<string>? contextLinesAfter)
+        List<string>? contextLinesAfter,
+        Dictionary<string, string>? contextProperties = null)
     {
         if (_contextPromptEnabled != "true" || string.IsNullOrEmpty(_contextPrompt))
         {
@@ -128,12 +129,38 @@ public abstract class BaseLanguageService : BaseTranslationService
             "Context preview - Before: [{Before}], After: [{After}]",
             beforePreview, afterPreview);
 
-        _replacements["contextBefore"] = beforeContext;
-        _replacements["lineToTranslate"] = text;
-        _replacements["contextAfter"] = afterContext;
+        // Use a local replacements dictionary to avoid mutating service-level state
+        var replacements = new Dictionary<string, string>(_replacements)
+        {
+            ["contextBefore"] = beforeContext,
+            ["lineToTranslate"] = text,
+            ["contextAfter"] = afterContext
+        };
 
-        var result = ReplacePlaceholders(_contextPrompt, _replacements);
+        // Add individual context properties to replacements as {context.<key>}
+        if (contextProperties != null && contextProperties.Count > 0)
+        {
+            foreach (var kv in contextProperties)
+            {
+                var key = $"context.{kv.Key}";
+                replacements[key] = kv.Value ?? "";
+            }
 
+            // Composite string representation for convenience and a JSON form
+            replacements["context"] = string.Join("\n", contextProperties.Select(kv => $"{kv.Key}: {kv.Value}"));
+            try
+            {
+                replacements["contextJson"] = JsonSerializer.Serialize(contextProperties);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to serialize context properties to JSON");
+            }
+
+            _logger.LogInformation("Context properties applied: {Keys}", string.Join(", ", contextProperties.Keys));
+        }
+
+        var result = ReplacePlaceholders(_contextPrompt, replacements);
         var resultPreview = result.Length > 200 ? result.Substring(0, 200) + "..." : result;
         _logger.LogInformation("Final prompt preview (first 200 chars): {Result}", resultPreview);
 

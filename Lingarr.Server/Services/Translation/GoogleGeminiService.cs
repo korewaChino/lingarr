@@ -1,7 +1,8 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Collections.Generic;
 using Lingarr.Core.Configuration;
 using Lingarr.Server.Exceptions;
 using Lingarr.Server.Interfaces.Services;
@@ -96,15 +97,15 @@ public class GoogleGeminiService : BaseLanguageService, ITranslationService, IBa
             _httpClient.DefaultRequestHeaders.Accept.Clear();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            _maxRetries = int.TryParse(settings[SettingKeys.Translation.MaxRetries], out var maxRetries) 
-                ? maxRetries 
+            _maxRetries = int.TryParse(settings[SettingKeys.Translation.MaxRetries], out var maxRetries)
+                ? maxRetries
                 : 5;
-            var retryDelaySeconds = int.TryParse(settings[SettingKeys.Translation.RetryDelay], out var delaySeconds) 
-                ? delaySeconds 
+            var retryDelaySeconds = int.TryParse(settings[SettingKeys.Translation.RetryDelay], out var delaySeconds)
+                ? delaySeconds
                 : 1;
             _retryDelay = TimeSpan.FromSeconds(retryDelaySeconds);
-            _retryDelayMultiplier = int.TryParse(settings[SettingKeys.Translation.RetryDelayMultiplier], out var multiplier) 
-                ? multiplier 
+            _retryDelayMultiplier = int.TryParse(settings[SettingKeys.Translation.RetryDelayMultiplier], out var multiplier)
+                ? multiplier
                 : 2;
 
             _initialized = true;
@@ -122,14 +123,15 @@ public class GoogleGeminiService : BaseLanguageService, ITranslationService, IBa
         string targetLanguage,
         List<string>? contextLinesBefore,
         List<string>? contextLinesAfter,
+        Dictionary<string, string>? contextProperties,
         CancellationToken cancellationToken)
     {
         await InitializeAsync(sourceLanguage, targetLanguage);
 
-        text = ApplyContextIfEnabled(text, contextLinesBefore, contextLinesAfter);
+        text = ApplyContextIfEnabled(text, contextLinesBefore, contextLinesAfter, contextProperties);
         using var retry = new CancellationTokenSource();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, retry.Token);
-        
+
         var delay = _retryDelay;
         for (var attempt = 1; attempt <= _maxRetries; attempt++)
         {
@@ -144,7 +146,7 @@ public class GoogleGeminiService : BaseLanguageService, ITranslationService, IBa
                     _logger.LogError(ex, "Too many requests. Max retries exhausted for text: {Text}", text);
                     throw new TranslationException("Too many requests. Retry limit reached.", ex);
                 }
-                
+
                 await Task.Delay(delay, linked.Token).ConfigureAwait(false);
                 delay = TimeSpan.FromTicks(delay.Ticks * _retryDelayMultiplier);
 
@@ -323,10 +325,10 @@ public class GoogleGeminiService : BaseLanguageService, ITranslationService, IBa
         CancellationToken cancellationToken)
     {
         await InitializeAsync(sourceLanguage, targetLanguage);
-        
+
         using var retry = new CancellationTokenSource();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, retry.Token);
-        
+
         var delay = _retryDelay;
         for (var attempt = 1; attempt <= _maxRetries; attempt++)
         {

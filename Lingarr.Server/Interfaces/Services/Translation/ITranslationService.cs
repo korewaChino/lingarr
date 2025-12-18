@@ -1,4 +1,5 @@
-﻿using Lingarr.Server.Exceptions;
+using System.Collections.Generic;
+using Lingarr.Server.Exceptions;
 using Lingarr.Server.Models;
 using Newtonsoft.Json;
 
@@ -18,20 +19,22 @@ public interface ITranslationService
     /// <param name="text">The text to be translated.</param>
     /// <param name="sourceLanguage">The language code of the source text.</param>
     /// <param name="targetLanguage">The language code of the desired translation.</param>
-    /// <param name="contextLinesBefore">List of subtitle lines after the subtitle line</param>
+    /// <param name="contextLinesBefore">List of subtitle lines before the subtitle line</param>
     /// <param name="contextLinesAfter">List of subtitle lines after the subtitle line</param>
+    /// <param name="contextProperties">Optional additional context key/value pairs (available as {context.key} placeholders in prompts)</param>
     /// <param name="cancellationToken">Token to cancel the translation operation</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the translated text.</returns>
     /// <exception cref="ArgumentException">Thrown when the input parameters are invalid or empty.</exception>
     /// <exception cref="TranslationException">Thrown when an error occurs during the translation process.</exception>
     Task<string> TranslateAsync(
-        string text, 
-        string sourceLanguage, 
-        string targetLanguage, 
-        List<string>? contextLinesBefore, 
-        List<string>? contextLinesAfter, 
+        string text,
+        string sourceLanguage,
+        string targetLanguage,
+        List<string>? contextLinesBefore,
+        List<string>? contextLinesAfter,
+        Dictionary<string, string>? contextProperties,
         CancellationToken cancellationToken);
-    
+
     /// <summary>
     /// Retrieves a list of available source languages and their supported target languages.
     /// </summary>
@@ -39,7 +42,7 @@ public interface ITranslationService
     /// <exception cref="InvalidOperationException">Thrown when service is not properly configured or initialization fails</exception>
     /// <exception cref="JsonException">Thrown when language configuration files cannot be parsed (for file-based services)</exception>
     Task<List<SourceLanguage>> GetLanguages();
-    
+
     /// <summary>
     /// Retrieves available LLM (Large Language Model) models from AI services.
     /// </summary>

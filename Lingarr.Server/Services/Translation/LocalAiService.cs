@@ -1,7 +1,8 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Collections.Generic;
 using Lingarr.Core.Configuration;
 using Lingarr.Server.Exceptions;
 using Lingarr.Server.Interfaces.Services;
@@ -104,15 +105,15 @@ public class LocalAiService : BaseLanguageService, ITranslationService, IBatchTr
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
             }
 
-            _maxRetries = int.TryParse(settings[SettingKeys.Translation.MaxRetries], out var maxRetries) 
-                ? maxRetries 
+            _maxRetries = int.TryParse(settings[SettingKeys.Translation.MaxRetries], out var maxRetries)
+                ? maxRetries
                 : 5;
-            var retryDelaySeconds = int.TryParse(settings[SettingKeys.Translation.RetryDelay], out var delaySeconds) 
-                ? delaySeconds 
+            var retryDelaySeconds = int.TryParse(settings[SettingKeys.Translation.RetryDelay], out var delaySeconds)
+                ? delaySeconds
                 : 1;
             _retryDelay = TimeSpan.FromSeconds(retryDelaySeconds);
-            _retryDelayMultiplier = int.TryParse(settings[SettingKeys.Translation.RetryDelayMultiplier], out var multiplier) 
-                ? multiplier 
+            _retryDelayMultiplier = int.TryParse(settings[SettingKeys.Translation.RetryDelayMultiplier], out var multiplier)
+                ? multiplier
                 : 2;
 
             _initialized = true;
@@ -130,11 +131,12 @@ public class LocalAiService : BaseLanguageService, ITranslationService, IBatchTr
         string targetLanguage,
         List<string>? contextLinesBefore,
         List<string>? contextLinesAfter,
+        Dictionary<string, string>? contextProperties,
         CancellationToken cancellationToken)
     {
         await InitializeAsync(sourceLanguage, targetLanguage);
 
-        text = ApplyContextIfEnabled(text, contextLinesBefore, contextLinesAfter);
+        text = ApplyContextIfEnabled(text, contextLinesBefore, contextLinesAfter, contextProperties);
         using var retry = new CancellationTokenSource();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, retry.Token);
 
@@ -196,7 +198,7 @@ public class LocalAiService : BaseLanguageService, ITranslationService, IBatchTr
 
         using var retry = new CancellationTokenSource();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, retry.Token);
-        
+
         var delay = _retryDelay;
         for (var attempt = 1; attempt <= _maxRetries; attempt++)
         {

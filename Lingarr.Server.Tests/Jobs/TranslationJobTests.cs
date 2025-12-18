@@ -35,12 +35,12 @@ public class TranslationJobTests : IDisposable
     {
         _loggerMock = new Mock<ILogger<TranslationJob>>();
         _settingServiceMock = new Mock<ISettingService>();
-        
+
         var options = new DbContextOptionsBuilder<LingarrDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         _dbContext = new LingarrDbContext(options);
-        
+
         _progressServiceMock = new Mock<IProgressService>();
         _subtitleServiceMock = new Mock<ISubtitleService>();
         _scheduleServiceMock = new Mock<IScheduleService>();
@@ -111,7 +111,7 @@ public class TranslationJobTests : IDisposable
 
         var mockTranslationService = new Mock<ITranslationService>();
         mockTranslationService.Setup(s => s.ModelName).Returns("test-model");
-        
+
         _translationServiceFactoryMock
             .Setup(f => f.CreateTranslationService(It.IsAny<string>()))
             .Returns(mockTranslationService.Object);
@@ -138,6 +138,7 @@ public class TranslationJobTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<List<string>?>(),
                 It.IsAny<List<string>?>(),
+                It.IsAny<Dictionary<string, string>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync("Subtítulo de prueba");
 
@@ -209,7 +210,7 @@ public class TranslationJobTests : IDisposable
 
         var mockTranslationService = new Mock<ITranslationService>();
         mockTranslationService.Setup(s => s.ModelName).Returns("test-model");
-        
+
         _translationServiceFactoryMock
             .Setup(f => f.CreateTranslationService(It.IsAny<string>()))
             .Returns(mockTranslationService.Object);
@@ -236,6 +237,7 @@ public class TranslationJobTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<List<string>?>(),
                 It.IsAny<List<string>?>(),
+                It.IsAny<Dictionary<string, string>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync("Subtítulo de prueba");
 

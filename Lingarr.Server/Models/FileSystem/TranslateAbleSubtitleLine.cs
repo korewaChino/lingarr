@@ -7,4 +7,5 @@ public class TranslateAbleSubtitleLine
     public required string TargetLanguage { get; set; }
     public List<string>? ContextLinesBefore { get; set; }
     public List<string>? ContextLinesAfter { get; set; }
+    public Dictionary<string, string>? Context { get; set; }
 }

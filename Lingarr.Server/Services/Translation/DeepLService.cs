@@ -1,4 +1,5 @@
-﻿using DeepL;
+using System.Collections.Generic;
+using DeepL;
 using Lingarr.Core.Configuration;
 using Lingarr.Server.Exceptions;
 using Lingarr.Server.Interfaces.Services;
@@ -27,7 +28,7 @@ public class DeepLService : BaseTranslationService
     private int _maxRetries;
     private TimeSpan _retryDelay;
     private int _retryDelayMultiplier;
-    
+
     public DeepLService(
         ISettingService settings,
         ILogger<DeepLService> logger) : base(settings, logger)
@@ -62,17 +63,17 @@ public class DeepLService : BaseTranslationService
                 throw new InvalidOperationException("DeepL failed, please validate the API key.");
             }
 
-            _maxRetries = int.TryParse(settings[SettingKeys.Translation.MaxRetries], out var maxRetries) 
-                ? maxRetries 
+            _maxRetries = int.TryParse(settings[SettingKeys.Translation.MaxRetries], out var maxRetries)
+                ? maxRetries
                 : 3;
-            
-            var retryDelaySeconds = int.TryParse(settings[SettingKeys.Translation.RetryDelay], out var delaySeconds) 
-                ? delaySeconds 
+
+            var retryDelaySeconds = int.TryParse(settings[SettingKeys.Translation.RetryDelay], out var delaySeconds)
+                ? delaySeconds
                 : 2;
             _retryDelay = TimeSpan.FromSeconds(retryDelaySeconds);
 
-            _retryDelayMultiplier = int.TryParse(settings[SettingKeys.Translation.RetryDelayMultiplier], out var multiplier) 
-                ? multiplier 
+            _retryDelayMultiplier = int.TryParse(settings[SettingKeys.Translation.RetryDelayMultiplier], out var multiplier)
+                ? multiplier
                 : 2;
 
             _translator = new Translator(authKey, new TranslatorOptions
@@ -94,13 +95,13 @@ public class DeepLService : BaseTranslationService
             _initLock.Release();
         }
     }
-    
+
     /// <inheritdoc />
     public override async Task<List<SourceLanguage>> GetLanguages()
     {
         _logger.LogInformation($"Retrieving |Green|DeepL|/Green| languages");
         await InitializeAsync();
-        
+
         if (_translator == null)
         {
             throw new InvalidOperationException("DeepL translator was not properly initialized.");
@@ -116,33 +117,34 @@ public class DeepLService : BaseTranslationService
         {
             throw new InvalidOperationException("Failed to retrieve source languages from DeepL");
         }
-        
+
         var targetLanguagesList = targetLanguages
             .Where(lang => lang.Code != FilteredLanguageCode)
             .Select(lang => lang.Code)
             .ToList();
-        
+
         return sourceLanguages
             .Where(lang => lang.Code != FilteredLanguageCode)
             .Select(lang => new SourceLanguage
-        {
-            Code = lang.Code,
-            Name = lang.Name,
-            Targets = targetLanguagesList
-        }).ToList();
+            {
+                Code = lang.Code,
+                Name = lang.Name,
+                Targets = targetLanguagesList
+            }).ToList();
     }
 
     /// <inheritdoc />
     public override async Task<string> TranslateAsync(
         string text,
         string sourceLanguage,
-        string targetLanguage, 
-        List<string>? contextLinesBefore, 
-        List<string>? contextLinesAfter, 
+        string targetLanguage,
+        List<string>? contextLinesBefore,
+        List<string>? contextLinesAfter,
+        Dictionary<string, string>? contextProperties,
         CancellationToken cancellationToken)
     {
         await InitializeAsync();
-        
+
         if (_translator == null)
         {
             throw new TranslationException("DeepL translator was not properly initialized.");
@@ -207,11 +209,11 @@ public class DeepLService : BaseTranslationService
         var languages = await translator.GetTargetLanguagesAsync();
         var cacheOptions = new MemoryCacheEntryOptions()
             .SetAbsoluteExpiration(CacheDuration);
-            
+
         Cache.Set(TargetLanguagesCacheKey, languages, cacheOptions);
         return languages;
     }
-    
+
     /// <summary>
     /// Retrieves the list of available source languages from DeepL, using caching to optimize performance.
     /// </summary>
@@ -227,11 +229,11 @@ public class DeepLService : BaseTranslationService
         var languages = await translator.GetSourceLanguagesAsync();
         var cacheOptions = new MemoryCacheEntryOptions()
             .SetAbsoluteExpiration(CacheDuration);
-            
+
         Cache.Set(SourceLanguagesCacheKey, languages, cacheOptions);
         return languages;
     }
-    
+
     /// <inheritdoc />
     public override async Task<ModelsResponse> GetModels()
     {

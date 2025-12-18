@@ -1,4 +1,5 @@
-﻿using Lingarr.Server.Interfaces.Services;
+using System.Collections.Generic;
+using Lingarr.Server.Interfaces.Services;
 using Lingarr.Server.Interfaces.Services.Translation;
 using Lingarr.Server.Models;
 
@@ -20,16 +21,17 @@ public abstract class BaseTranslationService : ITranslationService
 
     /// <inheritdoc />
     public abstract Task<string> TranslateAsync(
-        string text, 
-        string sourceLanguage, 
+        string text,
+        string sourceLanguage,
         string targetLanguage,
-        List<string>? contextLinesBefore, 
-        List<string>? contextLinesAfter, 
+        List<string>? contextLinesBefore,
+        List<string>? contextLinesAfter,
+        Dictionary<string, string>? contextProperties,
         CancellationToken cancellationToken);
 
     /// <inheritdoc />
     public abstract Task<List<SourceLanguage>> GetLanguages();
-    
+
     /// <inheritdoc />
     public abstract Task<ModelsResponse> GetModels();
 }
